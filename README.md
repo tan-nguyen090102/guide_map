@@ -1,2 +1,2 @@
 # guide_map
- A Unity Project for world map in 2D
+ A Unity project for static map navigation in 2D.
