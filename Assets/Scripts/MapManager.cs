@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -10,13 +11,20 @@ public class MapManager : MonoBehaviour
 {
     private const float DEFAULT_TRANSITION_SPEED = 3f;
     private const float DEFAULT_SHOWING_SPEED_MULTIPLIER = 2f;
-    private const float DEFAULT_DELAY_INPUT_TIME = 0.2f;
+    private const float DEFAULT_DELAY_INPUT_TIME = 0.3f;
     public static MapManager instance { get; private set; }
-    public List<Button> buttons = new List<Button>();
-    public List<GameObject> info = new List<GameObject>();
-    public List<CanvasGroup> canvasGroups = new List<CanvasGroup>();
+    [SerializeField] private List<Button> buttons = new List<Button>();
+    [SerializeField] private List<GameObject> info = new List<GameObject>();
+    [SerializeField] private List<GameObject> pointOfInterestInfo = new List<GameObject>();
+    [SerializeField] private List<CanvasGroup> canvasGroups = new List<CanvasGroup>();
+    [SerializeField] private List<GameObject> prefabsToSpawn = new List<GameObject>();
+
+    private List<GameObject> infoBoxList = new List<GameObject>();
+    private List<string> pointNames = new List<string>();
     private CanvasGroup currentCG;
     private Image currentImageDisplaying;
+    private Transform currentInfoParent;
+    private Transform currentPointsOfInterest;
 
     private Coroutine co_fadingIn = null;
     private Coroutine co_fadingOut = null;
@@ -37,11 +45,16 @@ public class MapManager : MonoBehaviour
     private void Initialize()
     {
         currentCG = canvasGroups[0];
+        currentInfoParent = info[0].transform;
+        currentPointsOfInterest = pointOfInterestInfo[0].transform;
 
         for (int i = 1; i < canvasGroups.Count; i++)
         {
             canvasGroups[i].gameObject.SetActive(false);
         }
+
+        //Instantiate all info prefabs onto the scene
+        StartInstantiatingPrefab();
     }
 
     private string GetGameObjectOnHovering()
@@ -79,6 +92,54 @@ public class MapManager : MonoBehaviour
         foreach (Button button in buttons)
         {
             button.GetComponent<EventTrigger>().enabled = true;
+        }
+    }
+
+    private void StartInstantiatingPrefab()
+    {
+        int infoCount = currentPointsOfInterest.transform.childCount;
+        GameObject currentPrefab = prefabsToSpawn[0];
+        Transform currentParent = currentInfoParent;
+
+        foreach (var button in currentPointsOfInterest.GetComponentsInChildren<Button>())
+        {
+            pointNames.Add(button.name);
+        }
+
+        SpawnInfoBox(infoCount, currentPrefab, currentParent);
+        AssignInfoBox();
+    }
+
+    private void ClearPrefabs()
+    {
+        foreach (Transform transfrom in currentInfoParent.transform)
+        {
+            Destroy(transfrom.gameObject);
+        }
+
+        currentPointsOfInterest = null;
+        currentInfoParent = null;
+        pointNames.Clear();
+    }
+
+    private void SpawnInfoBox(int infoCount, GameObject currentPrefab, Transform currentParent)
+    {
+        infoBoxList.Clear();
+
+        for (int i = 0; i < infoCount; i++)
+        {
+            GameObject go = Instantiate(currentPrefab, Vector2.zero, Quaternion.identity, parent: currentParent);
+            go.name = pointNames[i];
+            infoBoxList.Add(go);
+        }
+    }
+
+    private void AssignInfoBox()
+    {
+        foreach (var prefab in infoBoxList)
+        {
+            TextMeshProUGUI titleText = prefab.GetComponentInChildren<TextMeshProUGUI>();
+            titleText.text = $"This is a {prefab.name}.";
         }
     }
 
@@ -148,15 +209,15 @@ public class MapManager : MonoBehaviour
         {
             case "Castle":
                 Debug.Log("Click on castle");
-                StartCoroutine(TransitioningMap(currentCG, GetCanvasGroup("Canvas_Minor_1")));
+                StartCoroutine(TransitioningMap(currentCG, canvasGroups[1], 1));
                 break;
-            case "Dungeon_1":
+            case "Dungeon 1":
                 Debug.Log("Click on dungeon 1");
-                StartCoroutine(TransitioningMap(currentCG, GetCanvasGroup("Canvas_Minor_2")));
+                StartCoroutine(TransitioningMap(currentCG, canvasGroups[2], 2));
                 break;
-            case "Dungeon_2":
+            case "Dungeon 2":
                 Debug.Log("Click on dungeon 2");
-                StartCoroutine(TransitioningMap(currentCG, GetCanvasGroup("Canvas_Minor_3")));
+                StartCoroutine(TransitioningMap(currentCG, canvasGroups[3], 3));
                 break;
         }
     }
@@ -164,7 +225,7 @@ public class MapManager : MonoBehaviour
     public void OnClickBack()
     {
         Debug.Log("Back to main map");
-        StartCoroutine(TransitioningMap(currentCG, GetCanvasGroup("Canvas_Main")));
+        StartCoroutine(TransitioningMap(currentCG, canvasGroups[0], 0));
     }
 
     private IEnumerator ShowInfo(CanvasGroup targetCG)
@@ -188,27 +249,36 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    private IEnumerator TransitioningMap(CanvasGroup currentCG, CanvasGroup targetCG)
+    private IEnumerator TransitioningMap(CanvasGroup currentCG, CanvasGroup targetCG, int index)
     {
         DisableAllButton(); 
-        CanvasGroup infoCG = currentImageDisplaying.GetComponent<CanvasGroup>();
-        if (infoCG.alpha != 0f)
+
+        if (currentImageDisplaying != null)
         {
-            if (co_fadingIn != null)
+            CanvasGroup infoCG = currentImageDisplaying.GetComponent<CanvasGroup>();
+            if (infoCG.alpha != 0f)
             {
-                StopCoroutine(co_fadingIn);
-                co_fadingIn = null;
+                if (co_fadingIn != null)
+                {
+                    StopCoroutine(co_fadingIn);
+                    co_fadingIn = null;
+                }
+                yield return HideInfo(infoCG);
             }
-            yield return HideInfo(infoCG);
-        }     
+        }      
+
+        ClearPrefabs();
 
         yield return FadeOutImage(currentCG);
         currentCG.gameObject.SetActive(false);
         targetCG.gameObject.SetActive(true);
         yield return FadeInImage(targetCG);
         this.currentCG = targetCG;
+        this.currentInfoParent = info[index].transform;
+        this.currentPointsOfInterest = pointOfInterestInfo[index].transform;
 
         EnableAllButton();
+        StartInstantiatingPrefab();
     } 
 
     public Coroutine FadeInImage(CanvasGroup targetGroup, float speed = 1f)
