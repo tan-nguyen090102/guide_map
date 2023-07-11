@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +10,8 @@ public class MapManager : MonoBehaviour
 {
     private const float DEFAULT_TRANSITION_SPEED = 3f;
     private const float DEFAULT_SHOWING_SPEED_MULTIPLIER = 2f;
-    private const float DEFAULT_DELAY_INPUT_TIME = 0.3f;
+    private const float DEFAULT_DELAY_INPUT_TIME = 0.1f;
+    private const float DEFAULT_Y_INFO_POSITION = 1.5f;
     public static MapManager instance { get; private set; }
     [SerializeField] private List<Button> buttons = new List<Button>();
     [SerializeField] private List<GameObject> info = new List<GameObject>();
@@ -95,6 +95,11 @@ public class MapManager : MonoBehaviour
         }
     }
 
+    public GameObject GetPrefab(int index)
+    {
+        return prefabsToSpawn[index];
+    }
+
     private void StartInstantiatingPrefab()
     {
         int infoCount = currentPointsOfInterest.transform.childCount;
@@ -112,9 +117,9 @@ public class MapManager : MonoBehaviour
 
     private void ClearPrefabs()
     {
-        foreach (Transform transfrom in currentInfoParent.transform)
+        foreach (Transform transform in currentInfoParent.transform)
         {
-            Destroy(transfrom.gameObject);
+            Destroy(transform.gameObject);
         }
 
         currentPointsOfInterest = null;
@@ -125,13 +130,17 @@ public class MapManager : MonoBehaviour
     private void SpawnInfoBox(int infoCount, GameObject currentPrefab, Transform currentParent)
     {
         infoBoxList.Clear();
+        List<Button> currentButtonList = currentPointsOfInterest.gameObject.GetComponentsInChildren<Button>().ToList();
 
         for (int i = 0; i < infoCount; i++)
         {
-            GameObject go = Instantiate(currentPrefab, Vector2.zero, Quaternion.identity, parent: currentParent);
+            Vector2 position = new Vector2(currentButtonList[i].transform.position.x, currentButtonList[i].transform.position.y + DEFAULT_Y_INFO_POSITION);
+            GameObject go = Instantiate(currentPrefab, position, Quaternion.identity, parent: currentParent);
             go.name = pointNames[i];
             infoBoxList.Add(go);
         }
+
+        currentButtonList.Clear();
     }
 
     private void AssignInfoBox()
@@ -139,7 +148,7 @@ public class MapManager : MonoBehaviour
         foreach (var prefab in infoBoxList)
         {
             TextMeshProUGUI titleText = prefab.GetComponentInChildren<TextMeshProUGUI>();
-            titleText.text = $"This is a {prefab.name}.";
+            titleText.text = prefab.name;
         }
     }
 
