@@ -25,9 +25,11 @@ public class MapManager : MonoBehaviour
     private Image currentImageDisplaying;
     private Transform currentInfoParent;
     private Transform currentPointsOfInterest;
+    private ShowingCharacterIcon showingIcon;
 
     private Coroutine co_fadingIn = null;
     private Coroutine co_fadingOut = null;
+    public bool isOnButton { get; private set; } = false;
     public bool isFadingIn => co_fadingIn != null;
     public bool isFadingOut => co_fadingOut != null;
 
@@ -163,8 +165,10 @@ public class MapManager : MonoBehaviour
         if (hoveringButton != null)
         {
             Image displayImage = GetInfo(hoveringButton);
-            StartCoroutine(ShowInfo(displayImage.GetComponent<CanvasGroup>()));
+            if (displayImage != null)
+                StartCoroutine(ShowInfo(displayImage.GetComponent<CanvasGroup>()));
         }
+        isOnButton = true;
     }
 
     public void OnMouseExit()
@@ -172,7 +176,8 @@ public class MapManager : MonoBehaviour
         if (currentImageDisplaying != null)
         {
             StartCoroutine(HideInfo(currentImageDisplaying.GetComponent<CanvasGroup>()));
-        }   
+        }
+        isOnButton = false;
     }
 
     private Image GetInfo(Button hoverButton)
