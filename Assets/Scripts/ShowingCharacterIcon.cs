@@ -51,7 +51,7 @@ public class ShowingCharacterIcon: MonoBehaviour
         Update();
     }
 
-    public Coroutine AnimateIcon(Vector2 position, float speed = 5f, bool isSmooth = false)
+    public Coroutine AnimateIcon(Vector2 position, float speed = 50f, bool isSmooth = false)
     {
         if (isMoving)
             StopCoroutine(co_moving);
